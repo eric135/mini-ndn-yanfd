@@ -4,6 +4,7 @@
 # Copyright (C) 2015-2020, The University of Memphis,
 #                          Arizona Board of Regents,
 #                          Regents of the University of California.
+# Copyright (C) 2021, Eric Newberry.
 #
 # This file is part of Mini-NDN.
 # See AUTHORS.md for a complete list of Mini-NDN authors and contributors.
@@ -88,13 +89,17 @@ fi
 NDN_SRC="ndn-src"
 
 NDN_GITHUB="https://github.com/named-data"
+YANFD_GITHUB="https://github.com/eric135/YaNFD"
 
 NDN_CXX_VERSION="master"
 NFD_VERSION="master"
+YANFD_VERSION="master"
 PSYNC_VERSION="master"
 CHRONOSYNC_VERSION="master"
 NLSR_VERSION="master"
 NDN_TOOLS_VERSION="master"
+
+GO_VERSION="1.16"
 
 if [ $SUDO_USER ]; then
     REAL_USER=$SUDO_USER
@@ -153,6 +158,35 @@ function ndn_install {
     popd
 }
 
+function yanfd_install {
+    mkdir -p $NDN_SRC
+
+    if [[ $YANFD_VERSION == "master" ]]; then
+        if [[ -d $NDN_SRC/YaNFD ]]; then
+            pushd $NDN_SRC/YaNFD
+            git checkout master
+        else
+            git clone --depth 1 $YANFD_GITHUB $NDN_SRC/YaNFD
+            pushd $NDN_SRC/YaNFD
+        fi
+    else
+        if [[ -d $NDN_SRC/YaNFD ]]; then
+            pushd $NDN_SRC/YaNFD
+            if [[ $(git rev-parse --is-shallow-repository) == "true" ]]; then
+                git fetch --unshallow
+                git fetch --all
+            fi
+        else
+            git clone $YANFD_GITHUB $NDN_SRC/YaNFD
+            pushd $NDN_SRC/YaNFD
+        fi
+        git checkout $version -b version-$version || git checkout version-$version
+    fi
+
+    sudo -E -u $REAL_USER make && sudo make install
+    popd
+}
+
 function ndn {
     if [[ updated != true ]]; then
         $update
@@ -160,15 +194,24 @@ function ndn {
     fi
 
     if [[ $DIST == Ubuntu || $DIST == Debian ]]; then
-        $install git libsqlite3-dev libboost-all-dev make g++ libssl-dev libpcap-dev pkg-config python-pip
+        $install git libsqlite3-dev libboost-all-dev make g++ libssl-dev libpcap-dev pkg-config python-pip python3-pip
     fi
 
     if [[ $DIST == Fedora ]]; then
-        $install gcc-c++ sqlite-devel boost-devel openssl-devel libpcap-devel python-pip
+        $install gcc-c++ sqlite-devel boost-devel openssl-devel libpcap-devel python-pip python3-pip
+    fi
+
+    if [ ! -d "/usr/local/go" ]; then
+        wget -O /tmp/go.tar.gz https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
+        sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+        export PATH=$PATH:/usr/local/go/bin
+        echo "export PATH=\$PATH:/usr/local/go/bin" >>~/.profile
     fi
 
     ndn_install ndn-cxx $NDN_CXX_VERSION
+    # We still need to install NFD to use nfdc
     ndn_install NFD $NFD_VERSION --without-websocket
+    yanfd_install $YANFD_VERSION
     ndn_install PSync $PSYNC_VERSION --with-examples
     ndn_install ChronoSync $CHRONOSYNC_VERSION
     ndn_install NLSR $NLSR_VERSION

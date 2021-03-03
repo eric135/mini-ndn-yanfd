@@ -3,6 +3,7 @@
 # Copyright (C) 2015-2020, The University of Memphis,
 #                          Arizona Board of Regents,
 #                          Regents of the University of California.
+# Copryight (C) 2021, Eric Newberry.
 #
 # This file is part of Mini-NDN.
 # See AUTHORS.md for a complete list of Mini-NDN authors and contributors.
@@ -213,13 +214,14 @@ class Minindn(object):
     @staticmethod
     def cleanUp():
         devnull = open(os.devnull, 'w')
+        call('killall yanfd'.split(), stdout=devnull, stderr=devnull)
         call('nfd-stop', stdout=devnull, stderr=devnull)
         call('mn --clean'.split(), stdout=devnull, stderr=devnull)
 
     @staticmethod
     def verifyDependencies():
         """Prevent MiniNDN from running without necessary dependencies"""
-        dependencies = ['nfd', 'nlsr', 'infoedit', 'ndnping', 'ndnpingserver']
+        dependencies = ['yanfd', 'nfd', 'nlsr', 'infoedit', 'ndnping', 'ndnpingserver']
         devnull = open(os.devnull, 'w')
         # Checks that each program is in the system path
         for program in dependencies:
