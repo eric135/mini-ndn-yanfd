@@ -215,6 +215,7 @@ class Minindn(object):
     def cleanUp():
         devnull = open(os.devnull, 'w')
         call('killall yanfd'.split(), stdout=devnull, stderr=devnull)
+        call('killall mw-nfd'.split(), stdout=devnull, stderr=devnull)
         call('nfd-stop', stdout=devnull, stderr=devnull)
         call('mn --clean'.split(), stdout=devnull, stderr=devnull)
 
